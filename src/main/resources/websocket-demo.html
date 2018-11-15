@@ -1,0 +1,74 @@
+<style>
+    p {
+        margin-block-start: 0.2em;
+        margin-block-end: 0.2em;
+    }
+</style>
+<script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+
+<body>
+    <button id="add_session">add</button>
+    <div id="sessions">
+    </div>
+</body>
+<script>
+$(function() {
+  let block_tmp = '<div style="width: 500px; display: inline-block"></div>';
+  let session_tmp = '<div style="overflow-y: scroll; height:150px"></div>';
+  let msg_tmp = '<p><strong name="name"></strong>:&nbsp;<span name="msg"></span>&nbsp;<sub name="timestamp"></sub></p>';
+  let id_tmp = '<strong name="id"></strong>';
+  let input_tmp = '<input>';
+  let btn_tmp = '<button></button>';
+
+  $('#add_session').on('click', function(e) {
+    let $block = $(block_tmp);
+    let $session = $(session_tmp);
+    let $id = $(id_tmp);
+    let $input = $(input_tmp);
+    let $send_btn = $(btn_tmp).text('send');
+    let $close_btn = $(btn_tmp).text('close');
+
+    $block.append($session)
+        .append($id)
+        .append($input)
+        .append($send_btn)
+        .append($close_btn);
+    $('#sessions').append($block);
+
+    let currSocket = new WebSocket('ws://localhost:8080/socket/chat');
+    currSocket.onmessage = function(evt) {
+      let $msg = $(msg_tmp);
+      let data = JSON.parse(evt.data);
+      let msg;
+      switch (data.type) {
+        case 'MESSAGE': msg = '<' + data.type + '> ' + data.message; break;
+        case 'JOIN': msg = '<' + data.type + '>'; break;
+        case 'LEAVE': msg = '<' + data.type + '>'; break;
+        case 'LOGIN': msg = '<' + data.type + '>'; $id.text(data.id); break;
+        default: msg = '<Unknow Type:' + data.type + '>';
+      }
+
+      $msg.find('[name="name"]').text(data.id);
+      $msg.find('[name="msg"]').text(msg);
+      $msg.find('[name="timestamp"]').text("(" + data.time + ")");
+      $session.prepend($msg);
+    };
+    currSocket.onopen = function() {
+      $session.prepend('socket opened');
+    };
+
+    $send_btn.on('click', function(e) {
+      currSocket.send($input.val());
+      $input.val('');
+    });
+
+    $close_btn.on('click', function(e) {
+      currSocket.close();
+      $block.remove();
+    });
+
+  });
+
+
+});
+</script>
