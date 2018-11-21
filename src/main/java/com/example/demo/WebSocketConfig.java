@@ -12,7 +12,7 @@ import org.springframework.web.reactive.handler.SimpleUrlHandlerMapping;
 import org.springframework.web.reactive.socket.WebSocketHandler;
 import org.springframework.web.reactive.socket.server.support.WebSocketHandlerAdapter;
 
-import com.example.demo.socket.ChatHandler;
+import com.example.demo.handler.ChatHandler;
 
 @Configuration
 public class WebSocketConfig {

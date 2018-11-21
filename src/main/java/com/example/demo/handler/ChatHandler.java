@@ -1,4 +1,4 @@
-package com.example.demo.socket;
+package com.example.demo.handler;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
