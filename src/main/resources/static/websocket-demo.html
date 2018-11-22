@@ -12,12 +12,24 @@
     </div>
 </body>
 <script>
-$(function() {
+  function relativeWsUri(uri) {
+    let loc = window.location, new_uri;
+    if (loc.protocol === "https:") {
+      new_uri = "wss:";
+    } else {
+      new_uri = "ws:";
+    }
+    new_uri += "//" + loc.host;
+    new_uri += uri;
+    return new_uri;
+  }
+
+  $(function() {
   let block_tmp = '<div style="width: 500px; display: inline-block"></div>';
   let session_tmp = '<div style="overflow-y: scroll; height:150px"></div>';
   let msg_tmp = '<p><strong name="name"></strong>:&nbsp;<span name="msg"></span>&nbsp;<sub name="timestamp"></sub></p>';
   let id_tmp = '<strong name="id"></strong>';
-  let input_tmp = '<input>';
+  let input_tmp = '<textarea></textarea>';
   let btn_tmp = '<button></button>';
 
   $('#add_session').on('click', function(e) {
@@ -35,7 +47,7 @@ $(function() {
         .append($close_btn);
     $('#sessions').append($block);
 
-    let currSocket = new WebSocket('ws://localhost:8080/socket/chat');
+    let currSocket = new WebSocket(relativeWsUri('/socket/chat'));
     currSocket.onmessage = function(evt) {
       let $msg = $(msg_tmp);
       let data = JSON.parse(evt.data);

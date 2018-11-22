@@ -29,7 +29,7 @@
     document.querySelector('#get_members').onclick = e => {
       empty(domDataTableBody);
 
-      let eventSource = new EventSource('http://localhost:8080/member');
+      let eventSource = new EventSource('/member');
       eventSource.onmessage = evt => {
         let data = JSON.parse(evt.data);
         appendDataToTable(data);
@@ -54,7 +54,7 @@
         return;
       }
 
-      let eventSource = new EventSource('http://localhost:8080/member/generate/' + genSize);
+      let eventSource = new EventSource('/member/generate/' + genSize);
       eventSource.onmessage = evt => {
         let data = JSON.parse(evt.data);
         appendDataToTable(data);
