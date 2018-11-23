@@ -40,7 +40,7 @@
 
     // 按鈕>刪除所有member
     document.querySelector('#del_members').onclick = e => {
-      fetch('http://localhost:8080/member', {method: 'DELETE'})
+      fetch('/member', {method: 'DELETE'})
           .then(response => empty(domDataTableBody));
     };
 

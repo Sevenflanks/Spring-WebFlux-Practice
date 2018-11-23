@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>demo</title>
+    <style>
+        .logs {
+            overflow-y: scroll;
+            height:150px;
+            width: 500px;
+            display: inline-block
+        }
+        .logs > p {
+            margin-block-start: 0.2em;
+            margin-block-end: 0.2em;
+        }
+    </style>
+</head>
+<body>
+<form id="upload_form">
+    <input name="files" type="file" multiple="multiple">
+    <button id="do_upload" type="button">Upload</button>
+</form>
+<div id="logs" class="logs"></div>
+</body>
+<script>
+  const DOM_LOGS = document.querySelector('#logs');
+  document.querySelector('#do_upload').onclick = e => {
+    // 按鈕封印
+    let target = e.target;
+    target.disabled = 'disabled';
+
+    // 上傳進度顯示
+    let uploadProcess = document.createElement('p');
+    DOM_LOGS.prepend(uploadProcess);
+
+    // xhr物件
+    var xhr = new XMLHttpRequest();
+
+    // 上傳進度更新
+    xhr.upload.onprogress = evt => {
+      if (evt.lengthComputable) {
+        uploadProcess.innerText = `Uploading ${parseInt(100 * evt.loaded / evt.total)}%`;
+      }
+    };
+
+    // 上傳完畢解除封印
+    xhr.upload.onloadend = evt => {
+        target.disabled = null;
+    };
+
+    // xhr個階段log
+    xhr.onreadystatechange = evt => {
+      console.log("state change.. state:", xhr.readyState, xhr.responseText);
+      switch (xhr.readyState) {
+        case 2: DOM_LOGS.insertAdjacentHTML('afterbegin', '<p>server processing</p>'); break;
+        case 3: DOM_LOGS.insertAdjacentHTML('afterbegin', '<p>server responsing</p>'); break;
+        case 4: DOM_LOGS.insertAdjacentHTML('afterbegin', '<p>done</p>'); break;
+      }
+    };
+
+    // 建立連線
+    xhr.open('POST', '/file/upload');
+    // 送出request
+    xhr.send(new FormData(document.querySelector('#upload_form')));
+  };
+
+  // function consume(stream, total = 0) {
+  //   while (stream.state === 'readable') {
+  //     let data = stream.read();
+  //     total += data.byteLength;
+  //
+  //     console.log(`received ${data.byteLength} bytes (${total} bytes in total).`)
+  //   }
+  //   if (stream.state === 'waiting') {
+  //     stream.ready.then(() => consume(stream, total))
+  //   }
+  //   return stream.closed;
+  // }
+  //
+  // fetch('/file/download', {
+  //   method: 'POST'
+  // })
+  //     .then(res => consume(res.body))
+  //     .then(() => console.log('consumed the entire body without keeping the whole thing in memory!'))
+  //     .catch((e) => console.error('something went wrong', e))
+
+</script>
+</html>
