@@ -23,51 +23,105 @@
 </form>
 <div id="logs" class="logs"></div>
 </body>
+
 <script>
   const DOM_LOGS = document.querySelector('#logs');
+
   document.querySelector('#do_upload').onclick = e => {
-    // 按鈕封印
-    let target = e.target;
-    target.disabled = 'disabled';
+    DOM_LOGS.insertAdjacentHTML('afterbegin', '<p>uploading...</p>');
 
-    // 上傳進度顯示
-    let uploadProcess = document.createElement('p');
-    DOM_LOGS.prepend(uploadProcess);
-
-    // xhr物件
-    var xhr = new XMLHttpRequest();
-
-    // 上傳進度更新
-    xhr.upload.onprogress = evt => {
-      if (evt.lengthComputable) {
-        uploadProcess.innerText = `Uploading ${parseInt(100 * evt.loaded / evt.total)}%`;
+    fetch('/file/upload', {
+      method: 'POST',
+      body: new FormData(document.querySelector('#upload_form'))
+    }).then(response => readFlux(response, {
+      onNext(value) {
+        DOM_LOGS.insertAdjacentHTML('afterbegin', `<p>server processed ${value}</p>`);
+      },
+      onComplete() {
+        DOM_LOGS.insertAdjacentHTML('afterbegin', `<p>all done</p>`);
       }
-    };
-
-    // 上傳完畢解除封印
-    xhr.upload.onloadend = evt => {
-        target.disabled = null;
-    };
-
-    // xhr個階段log
-    xhr.onreadystatechange = evt => {
-      console.log("state change.. state:", xhr.readyState, xhr.responseText);
-      switch (xhr.readyState) {
-        case 2: DOM_LOGS.insertAdjacentHTML('afterbegin', '<p>server processing</p>'); break;
-        case 3: DOM_LOGS.insertAdjacentHTML('afterbegin', '<p>server responsing</p>'); break;
-        case 4: DOM_LOGS.insertAdjacentHTML('afterbegin', '<p>done</p>'); break;
-      }
-    };
-
-    // 建立連線
-    xhr.open('POST', '/file/upload');
-    // 送出request
-    xhr.send(new FormData(document.querySelector('#upload_form')));
+    })
+    // ).then(response => response.text()
+    // ).then(text => console.log('done', text)
+    ).catch(error => console.log("error happened:", error));
   };
+
+  const defaultTextDecoder = new TextDecoder("utf-8");
+  function readFlux(response, {onNext = (value) => {}, onComplete = () => {}} = {}) {
+    const {body, headers} = response;
+    const reader = body.getReader();
+    const stream = new ReadableStream({
+      start(controller) {
+        return pump();
+
+        function pump() {
+          return reader.read().then(({done, value}) => {
+
+            // When no more data needs to be consumed, close the stream
+            if (done) {
+              onComplete();
+              controller.close();
+              return;
+            }
+            if (value) {
+              onNext(defaultTextDecoder.decode(value).trim());
+            }
+            // Enqueue the next data chunk into our target stream
+            controller.enqueue(value);
+            return pump();
+          });
+        }
+      }
+    });
+
+    return new Response(stream, {headers});
+  }
+
+  // document.querySelector('#do_upload').onclick = e => {
+  //   // 按鈕封印
+  //   let target = e.target;
+  //   target.disabled = 'disabled';
+  //
+  //   // 上傳進度顯示
+  //   let uploadProcess = document.createElement('p');
+  //   DOM_LOGS.prepend(uploadProcess);
+  //
+  //   // xhr物件
+  //   var xhr = new XMLHttpRequest();
+  //
+  //   // 上傳進度更新
+  //   xhr.upload.onprogress = evt => {
+  //     if (evt.lengthComputable) {
+  //       uploadProcess.innerText = `Uploading ${parseInt(100 * evt.loaded / evt.total)}%`;
+  //     }
+  //   };
+  //
+  //   // 上傳完畢解除封印
+  //   xhr.upload.onloadend = evt => {
+  //     target.disabled = null;
+  //   };
+  //
+  //   // xhr個階段log
+  //   xhr.onreadystatechange = evt => {
+  //     console.log(xhr.readyState, xhr.response);
+  //     switch (xhr.readyState) {
+  //       case 2: DOM_LOGS.insertAdjacentHTML('afterbegin', '<p>server processing</p>'); break;
+  //       case 3:
+  //         DOM_LOGS.insertAdjacentHTML('afterbegin', '<p>server responsed</p>');
+  //         break;
+  //       case 4: DOM_LOGS.insertAdjacentHTML('afterbegin', '<p>done</p>'); break;
+  //     }
+  //   };
+  //
+  //   // 建立連線
+  //   xhr.open('POST', '/file/upload');
+  //   // 送出request
+  //   xhr.send(new FormData(document.querySelector('#upload_form')));
+  // };
 
   // function consume(stream, total = 0) {
   //   while (stream.state === 'readable') {
-  //     let data = stream.read();
+  //     let data = stream.readFlux();
   //     total += data.byteLength;
   //
   //     console.log(`received ${data.byteLength} bytes (${total} bytes in total).`)

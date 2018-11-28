@@ -5,8 +5,10 @@ import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 
 import org.reactivestreams.Publisher;
+import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.http.codec.multipart.FilePart;
@@ -27,27 +29,30 @@ import reactor.core.publisher.Mono;
 public class FileController {
 
 	@PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	public Flux<ServerSentEvent<String>> upload(@RequestPart Flux<FilePart> files) throws IOException {
+	public Flux<ServerSentEvent<String>> upload(@RequestPart Flux<FilePart> files) {
 		return WebFluxUtils.SSE(files.flatMap(this::saveFile));
-	}
-
-	private void close(AsynchronousFileChannel fileChannel) {
-		try {
-			if (fileChannel != null) fileChannel.close();
-		} catch (IOException e) {
-			log.error("close fileChannel error", e);
-		}
 	}
 
 	private Publisher<? extends String> saveFile(FilePart file) {
 		try {
-			final Path path = Paths.get("D:/", "demo", file.filename());
+			final String filename = file.filename();
+			final Path path = Paths.get("D:/", "demo", filename);
 			if (Files.exists(path)) {
 				Files.delete(path);
 			}
 			Files.createFile(path);
-			return file.transferTo(path.toFile())
-					.map(v -> file.filename());
+
+			final AsynchronousFileChannel channel = AsynchronousFileChannel.open(path, StandardOpenOption.WRITE);
+			return DataBufferUtils.write(file.content(), channel, 0)
+					.doOnComplete(() -> {
+						try {
+							channel.close();
+						} catch (IOException e) {
+							log.error("upload failed", e);
+						}
+						log.info("uploaded: {}", filename);
+					})
+					.then(Mono.just(filename));
 		} catch (IOException e) {
 			return Mono.error(e);
 		}
