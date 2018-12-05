@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>demo</title>
+</head>
+<body>
+    <button id="get_members">Get All</button><br>
+    <button id="del_members">Del All</button><br>
+    <input id="gen_size" type="number"><button id="gen_members">Generate</button><br>
+    <table id="data_table">
+        <thead>
+            <tr>
+                <td>id</td>
+                <td>empNo</td>
+                <td>name</td>
+                <td>createdTime</td>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</body>
+<script>
+
+    var domDataTableBody = document.querySelector('#data_table>tbody');
+
+    // 按鈕>取得所有member
+    document.querySelector('#get_members').onclick = e => {
+      empty(domDataTableBody);
+
+      let eventSource = new EventSource('/member');
+      eventSource.onmessage = evt => {
+        let data = JSON.parse(evt.data);
+        appendDataToTable(data);
+      };
+      eventSource.onerror = evt => eventSource.close();
+    };
+
+
+    // 按鈕>刪除所有member
+    document.querySelector('#del_members').onclick = e => {
+      fetch('/member', {method: 'DELETE'})
+          .then(response => empty(domDataTableBody));
+    };
+
+
+    // 按鈕>產生member
+    document.querySelector('#gen_members').onclick = e => {
+      let genSize = parseInt(document.querySelector('#gen_size').value);
+      if (!genSize) {
+        return;
+      }
+
+      let eventSource = new EventSource('/member/generate/' + genSize);
+      eventSource.onmessage = evt => {
+        let data = JSON.parse(evt.data);
+        appendDataToTable(data);
+      };
+      eventSource.onerror = evt => eventSource.close();
+    };
+
+
+    /** 將資料塞到table */
+    function appendDataToTable(data) {
+      let eleTr = document.createElement('tr');
+
+      let eleTd_id = document.createElement('td');
+      let eleTd_empNo = document.createElement('td');
+      let eleTd_name = document.createElement('td');
+      let eleTd_createdTime = document.createElement('td');
+
+      eleTd_id.innerText = data.id;
+      eleTd_empNo.innerText = data.empNo;
+      eleTd_name.innerText = data.name;
+      eleTd_createdTime.innerText = data.createdTime;
+
+      eleTr.appendChild(eleTd_id);
+      eleTr.appendChild(eleTd_empNo);
+      eleTr.appendChild(eleTd_name);
+      eleTr.appendChild(eleTd_createdTime);
+
+      domDataTableBody.appendChild(eleTr);
+    }
+
+    /** 將元素清空 */
+    function empty(ele) {
+      while (ele && ele.firstChild) {
+        ele.removeChild(ele.firstChild);
+      }
+    }
+
+
+</script>
+</html>

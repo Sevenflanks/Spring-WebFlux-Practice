@@ -33,29 +33,28 @@
     fetch('/file/upload', {
       method: 'POST',
       body: new FormData(document.querySelector('#upload_form'))
-    }).then(response => readFlux(response, {
+    }).then(response => readSSE(response, {
       onNext(value) {
-        DOM_LOGS.insertAdjacentHTML('afterbegin', `<p>server processed ${value}</p>`);
+        DOM_LOGS.insertAdjacentHTML('afterbegin', `<p>server processed ${value.data.length}</p>`);
       },
       onComplete() {
         DOM_LOGS.insertAdjacentHTML('afterbegin', `<p>all done</p>`);
       }
     })
-    // ).then(response => response.text()
-    // ).then(text => console.log('done', text)
     ).catch(error => console.log("error happened:", error));
   };
 
-  const defaultTextDecoder = new TextDecoder("utf-8");
-  function readFlux(response, {onNext = (value) => {}, onComplete = () => {}} = {}) {
+  const DEFAULT_TEXT_DECODER = new TextDecoder("utf-8");
+  function readSSE(response, {onNext = (value) => {}, onComplete = () => {}} = {}) {
     const {body, headers} = response;
     const reader = body.getReader();
     const stream = new ReadableStream({
       start(controller) {
         return pump();
 
-        function pump() {
+        function pump(storedValueTx = '') {
           return reader.read().then(({done, value}) => {
+            let valueTxStore = storedValueTx;
 
             // When no more data needs to be consumed, close the stream
             if (done) {
@@ -63,12 +62,41 @@
               controller.close();
               return;
             }
-            if (value) {
-              onNext(defaultTextDecoder.decode(value).trim());
+            try {
+              if (value) {
+                // 此處的Value受限於Uint8Array大小，每65536會截斷一次
+                valueTxStore += DEFAULT_TEXT_DECODER.decode(value);
+
+                let regexp = /data:(?<data>.*)\n\n/g;
+                let matcher = regexp.exec(valueTxStore);
+                let lastIndex = 0;
+                while (matcher) {
+                  let dataTx = matcher.groups['data'];
+                  // 紀錄最後一次讀到的地方
+                  lastIndex = matcher.index + matcher[0].length;
+                  if (dataTx) {
+                    let data;
+                    try {
+                      data = JSON.parse(dataTx);
+                    } catch (e) {
+                      data = dataTx;
+                    }
+
+                    onNext({
+                      data
+                    });
+                  }
+                  matcher = regexp.exec(valueTxStore);
+                }
+                // 將最後一次讀到的段落之後擷出來，以便跟下一次組合在一起
+                valueTxStore = valueTxStore.slice(lastIndex);
+              }
+            } catch (e) {
+              console.error(e);
             }
             // Enqueue the next data chunk into our target stream
             controller.enqueue(value);
-            return pump();
+            return pump(valueTxStore);
           });
         }
       }
@@ -121,7 +149,7 @@
 
   // function consume(stream, total = 0) {
   //   while (stream.state === 'readable') {
-  //     let data = stream.readFlux();
+  //     let data = stream.readSSE();
   //     total += data.byteLength;
   //
   //     console.log(`received ${data.byteLength} bytes (${total} bytes in total).`)
