@@ -3,18 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <title>demo</title>
+    <style>
+        td>input {
+            width: 100%;
+        }
+    </style>
 </head>
 <body>
-    <button id="get_members">Get All</button><br>
-    <button id="del_members">Del All</button><br>
+    <button id="get_members">Get All</button> <button id="del_members">Del All</button><br>
     <input id="gen_size" type="number"><button id="gen_members">Generate</button><br>
     <table id="data_table">
         <thead>
             <tr>
-                <td>id</td>
-                <td>empNo</td>
-                <td>name</td>
-                <td>createdTime</td>
+                <th>id</th>
+                <th>empNo</th>
+                <th>name</th>
+                <th>createdTime</th>
+                <th>function</th>
             </tr>
         </thead>
         <tbody>
@@ -68,17 +73,102 @@
       let eleTd_id = document.createElement('td');
       let eleTd_empNo = document.createElement('td');
       let eleTd_name = document.createElement('td');
+      let eleTd_empNo_input = document.createElement('input');
+      let eleTd_name_input = document.createElement('input');
       let eleTd_createdTime = document.createElement('td');
+      let eleTd_function = document.createElement('td');
+      let eleBtn_edit = document.createElement('button');
+      let eleBtn_save = document.createElement('button');
+      let eleBtn_can = document.createElement('button');
+      let eleBtn_del = document.createElement('button');
 
+      // 儲存按鈕-觸發儲存API
+      eleBtn_save.setAttribute('type', 'button');
+      eleBtn_save.innerText = 'save';
+      eleBtn_save.onclick = e => {
+        fetch(`/member`, {
+          headers: {'content-type': 'application/json'},
+          method: 'PUT',
+          body: JSON.stringify({
+            ...data,
+            empNo: eleTd_empNo_input.value,
+            name: eleTd_name_input.value
+          })
+        })
+          .then(response => response.json())
+          .then(json => {
+            if (json.error) {
+              alert(json.message);
+            } else {
+              eleTd_empNo.innerText = json.empNo;
+              eleTd_name.innerText = json.name;
+              empty(eleTd_function);
+              eleTd_function.appendChild(eleBtn_edit);
+              eleTd_function.appendChild(eleBtn_del);
+            }
+          })
+          .catch(error => console.error(error));
+      };
+
+      // 取消按鈕-重新load原始資料, 原始的empNo從input的隱含欄位取得
+      eleBtn_can.setAttribute('type', 'button');
+      eleBtn_can.innerText = 'cancel';
+      eleBtn_can.onclick = e => {
+        fetch(`/member/${eleTd_empNo_input.getAttribute('oriValue')}`, {method: 'GET'})
+          .then(response => response.json())
+          .then(json => {
+            if (json.error) {
+              alert(json.message);
+            } else {
+              eleTd_empNo.innerText = json.empNo;
+              eleTd_name.innerText = json.name;
+              empty(eleTd_function);
+              eleTd_function.appendChild(eleBtn_edit);
+              eleTd_function.appendChild(eleBtn_del);
+            }
+          })
+          .catch(error => console.error(error));
+      };
+
+      // 編輯按鈕-將可編輯的欄位改成input
+      eleBtn_edit.setAttribute('type', 'button');
+      eleBtn_edit.innerText = 'edit';
+      eleBtn_edit.onclick = e => {
+        eleTd_empNo_input.setAttribute('oriValue', eleTd_empNo.innerText);
+        eleTd_empNo_input.value = eleTd_empNo.innerText;
+        eleTd_name_input.value = eleTd_name.innerText;
+
+        empty(eleTd_empNo);
+        empty(eleTd_name);
+        empty(eleTd_function);
+
+        eleTd_empNo.appendChild(eleTd_empNo_input);
+        eleTd_name.appendChild(eleTd_name_input);
+        eleTd_function.appendChild(eleBtn_save);
+        eleTd_function.appendChild(eleBtn_can);
+      };
+
+      // 刪除按鈕-觸發刪除單列API
+      eleBtn_del.setAttribute('type', 'button');
+      eleBtn_del.innerText = 'delete';
+      eleBtn_del.onclick = e => {
+        fetch(`/member/${eleTd_empNo.innerText}`, {method: 'DELETE'})
+          .then(response => eleTr.remove())
+          .catch(error => console.error(error));
+      };
+
+      // 初始化畫面
       eleTd_id.innerText = data.id;
       eleTd_empNo.innerText = data.empNo;
       eleTd_name.innerText = data.name;
       eleTd_createdTime.innerText = data.createdTime;
-
+      eleTd_function.appendChild(eleBtn_edit);
+      eleTd_function.appendChild(eleBtn_del);
       eleTr.appendChild(eleTd_id);
       eleTr.appendChild(eleTd_empNo);
       eleTr.appendChild(eleTd_name);
       eleTr.appendChild(eleTd_createdTime);
+      eleTr.appendChild(eleTd_function);
 
       domDataTableBody.appendChild(eleTr);
     }
