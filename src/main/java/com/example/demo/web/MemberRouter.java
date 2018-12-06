@@ -16,7 +16,7 @@ import org.springframework.web.reactive.function.server.ServerResponse;
 import com.example.demo.entity.Member;
 import com.example.demo.handler.MemberHandler;
 
-@Profile("router")
+@Profile("!controller")
 @Configuration
 public class MemberRouter {
 

@@ -6,8 +6,8 @@
     <style>
         .logs {
             overflow-y: scroll;
-            height:150px;
-            width: 500px;
+            height:400px;
+            width: 1000px;
             display: inline-block
         }
         .logs > p {
@@ -24,6 +24,7 @@
 <div id="logs" class="logs"></div>
 </body>
 
+<script src="js/sseUtils.js"></script>
 <script>
   const DOM_LOGS = document.querySelector('#logs');
 
@@ -35,7 +36,7 @@
       body: new FormData(document.querySelector('#upload_form'))
     }).then(response => readSSE(response, {
       onNext(value) {
-        DOM_LOGS.insertAdjacentHTML('afterbegin', `<p>server processed ${value.data.length}</p>`);
+        DOM_LOGS.insertAdjacentHTML('afterbegin', `<p>server processed ${value.data}</p>`);
       },
       onComplete() {
         DOM_LOGS.insertAdjacentHTML('afterbegin', `<p>all done</p>`);
@@ -43,67 +44,6 @@
     })
     ).catch(error => console.log("error happened:", error));
   };
-
-  const DEFAULT_TEXT_DECODER = new TextDecoder("utf-8");
-  function readSSE(response, {onNext = (value) => {}, onComplete = () => {}} = {}) {
-    const {body, headers} = response;
-    const reader = body.getReader();
-    const stream = new ReadableStream({
-      start(controller) {
-        return pump();
-
-        function pump(storedValueTx = '') {
-          return reader.read().then(({done, value}) => {
-            let valueTxStore = storedValueTx;
-
-            // When no more data needs to be consumed, close the stream
-            if (done) {
-              onComplete();
-              controller.close();
-              return;
-            }
-            try {
-              if (value) {
-                // 此處的Value受限於Uint8Array大小，每65536會截斷一次
-                valueTxStore += DEFAULT_TEXT_DECODER.decode(value);
-
-                let regexp = /data:(?<data>.*)\n\n/g;
-                let matcher = regexp.exec(valueTxStore);
-                let lastIndex = 0;
-                while (matcher) {
-                  let dataTx = matcher.groups['data'];
-                  // 紀錄最後一次讀到的地方
-                  lastIndex = matcher.index + matcher[0].length;
-                  if (dataTx) {
-                    let data;
-                    try {
-                      data = JSON.parse(dataTx);
-                    } catch (e) {
-                      data = dataTx;
-                    }
-
-                    onNext({
-                      data
-                    });
-                  }
-                  matcher = regexp.exec(valueTxStore);
-                }
-                // 將最後一次讀到的段落之後擷出來，以便跟下一次組合在一起
-                valueTxStore = valueTxStore.slice(lastIndex);
-              }
-            } catch (e) {
-              console.error(e);
-            }
-            // Enqueue the next data chunk into our target stream
-            controller.enqueue(value);
-            return pump(valueTxStore);
-          });
-        }
-      }
-    });
-
-    return new Response(stream, {headers});
-  }
 
   // document.querySelector('#do_upload').onclick = e => {
   //   // 按鈕封印

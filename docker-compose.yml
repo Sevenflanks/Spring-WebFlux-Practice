@@ -1,0 +1,71 @@
+version: '3.3'
+networks:
+  net0:
+    driver: overlay
+services:
+  reactive-demo:
+    deploy:
+      mode: replicated
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 720
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: continue
+        monitor: 60s
+        max_failure_ratio: 0.3
+      replicas: 1
+    image: softleader/reactive-demo:latest
+    build: ./
+    restart: on-failure
+    ports:
+      - 8080:8080
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    networks:
+      - net0
+    depends_on:
+      - mongo
+
+  mongo:
+    deploy:
+      mode: replicated
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 720
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: continue
+        monitor: 60s
+        max_failure_ratio: 0.3
+      replicas: 1
+    image: mongo:latest
+    networks:
+      - net0
+
+  mongo-express:
+    deploy:
+      mode: replicated
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 720
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: continue
+        monitor: 60s
+        max_failure_ratio: 0.3
+      replicas: 1
+    image: mongo-express:latest
+    restart: always
+    ports:
+      - 8081:8081
+    networks:
+      - net0
+    depends_on:
+      - mongo
