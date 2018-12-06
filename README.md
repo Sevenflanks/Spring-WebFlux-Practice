@@ -1,7 +1,6 @@
-## Required
-1. MongoDB
-    - settings: `application.properties` spring.data.mongodb.uri
-
+# Reactive demo
+- this is a small demo of Reactive-Spring
+- dependencies with webflux & data-mongodb-reactive
 ## RUN
 - start directly
     ```
@@ -17,11 +16,12 @@
 
     $ docker stack up -c ./docker-compose.yml demo
     ```
-
-### index.html
+---
+### Demos
+#### index.html
 `http://localhost:8080/static/index.html`
 
-### CRUD Demo
+#### CRUD Demo
 `http://localhost:8080/static/member-demo.html`
 1. Router Style
     - WebFlux Demo (router style)
@@ -30,7 +30,7 @@
     - WebFlux Demo (controller style)
     - default disable: set `spring.profiles.active=controller` to enable
 
-### Chat Demo
+#### Chat Demo
 `http://localhost:8080/static/websocket-demo.html`
 - Reactive WebSocket Demo
 
