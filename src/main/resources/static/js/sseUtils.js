@@ -1,5 +1,5 @@
 const DEFAULT_TEXT_DECODER = new TextDecoder("utf-8");
-function readSSE(response, {onNext = (value) => {}, onComplete = () => {}} = {}) {
+function readSSE(response, {onNext = (value) => {}, onComplete = () => {}, onError = (e) => {console.error(e)}}) {
   const {body, headers} = response;
   const reader = body.getReader();
   const stream = new ReadableStream({
@@ -46,7 +46,7 @@ function readSSE(response, {onNext = (value) => {}, onComplete = () => {}} = {})
               valueTxStore = valueTxStore.slice(lastIndex);
             }
           } catch (e) {
-            console.error(e);
+            onError(e);
           }
           // Enqueue the next data chunk into our target stream
           controller.enqueue(value);
